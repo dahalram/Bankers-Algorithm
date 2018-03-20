@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define NUMBER_OF_CUSTOMERS 5
 #define NUMBER_OF_RESOURCES 3
 
+int max;
 pthread_mutex_t avail;
 /* the available amount for each resource*/
 int available[NUMBER_OF_RESOURCES];
@@ -25,6 +27,16 @@ int release_resources(int customer_num, int request[]) {
 
 }
 
+bool needs(int customer_id) {
+	int i;
+	for (i= 0; i < NUMBER_OF_RESOURCES; i++) {
+		if(need[customer_id][i] != 0) {
+			return false;
+		}
+	}
+	return true;
+}
+
 void *customer_entry(void *customer_num) {
 	int customer_id = (int*)customer_num;
 	
@@ -38,6 +50,14 @@ void *customer_entry(void *customer_num) {
 
 		/*TODO*/ 
 		//make requests
+		int *request = (int*)malloc(sizeof(int)*NUMBER_OF_RESOURCES);
+		int granted;
+		while(needs(customer_id)) {
+			// TODO
+		}
+
+		free(request);
+		sleep(rand()%max);
 	}
 }
 
