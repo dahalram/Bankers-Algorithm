@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <pthread.h>
 
 #define NUMBER_OF_CUSTOMERS 5
 #define NUMBER_OF_RESOURCES 3
@@ -23,7 +24,7 @@ int need[NUMBER_OF_CUSTOMERS][NUMBER_OF_RESOURCES];
 bool is_greater(int *x, int *y) {
 	int i;
 	for (i = 0; i < NUMBER_OF_RESOURCES; i++) {
-		if (a[i] <= b[i]) {
+		if (x[i] <= y[i]) {
 			return false;
 		}
 	}
@@ -74,7 +75,7 @@ int request_resources(int customer_num, int request[]) {
 	printf("%lu, %d, ", time(NULL), customer_num);
 	int i;
 	for(i=0; i < NUMBER_OF_RESOURCES; i++) {
-		printf("%d requested resource type %d " request[i], i);
+		printf("%d requested resource type %d ", request[i], i);
 	}
 	
 	/* Check if the resources are available */
@@ -131,7 +132,7 @@ bool needs(int customer_id) {
 }
 
 void *customer_entry(void *customer_num) {
-	int customer_id = (int*)customer_num;
+	int customer_id = *((int*)customer_num);
 	
 	while (1) {
 		int i;
@@ -167,7 +168,7 @@ void *customer_entry(void *customer_num) {
 	}
 }
 
-int main(int argc, int **argv) {
+int main(int argc, char **argv) {
 
 	/* Populate resources into available*/
 	int i;
