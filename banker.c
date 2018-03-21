@@ -22,21 +22,25 @@ int allocation[NUMBER_OF_CUSTOMERS][NUMBER_OF_RESOURCES];
 /* the remaining need of each customer*/
 int need[NUMBER_OF_CUSTOMERS][NUMBER_OF_RESOURCES];
 
-bool is_greater(int *x, int *y) {
+/* Checks if the request is smaller or equal to the available resource
+*/
+bool isnot_greater(int *x, int *y) {
 	int i;
 	for (i = 0; i < NUMBER_OF_RESOURCES; i++) {
-		if (x[i] <= y[i]) {
+		if (x[i] > y[i]) {
 			return false;
 		}
 	}
 	return true;
 }
 
-bool is_request_safe() {
+/*Checks if the request made is safe*/
+int is_request_safe() {
 	int *finish = (int*) malloc(NUMBER_OF_CUSTOMERS * sizeof(int));
 	int *work = (int*) malloc(NUMBER_OF_RESOURCES * sizeof(int));
 	int completed;
 	int i, j;
+	
 	for (i = 0; i < NUMBER_OF_CUSTOMERS; i++) {
 		finish[i] = 0;
 	}
@@ -48,7 +52,7 @@ bool is_request_safe() {
 	int c = 0;
 	do {
 		for (i = 0; i < NUMBER_OF_CUSTOMERS; i++) {
-			if (!is_greater(need[i], work) && finish[i]) {
+			if (isnot_greater(need[i], work) && finish[i]==0) {
 				for (j = 0; j < NUMBER_OF_RESOURCES; j++) {
 					work[j] += allocation[i][j];
 				}
@@ -59,7 +63,7 @@ bool is_request_safe() {
 					completed += finish[j];
 				}
 				if (completed == NUMBER_OF_CUSTOMERS) {
-					return true;
+					return 1;
 				} 
 			}
 		}
@@ -68,11 +72,17 @@ bool is_request_safe() {
 
 	free(work);
 	free(finish);
-	return false;
+	return 0;
 }
 
-int request_resources(int customer_num, int request[]) {
+/*
+* Request the resources needed with the customer_num
+* Returns 0 if resources are available and is safe
+* Else returns -1
+*/
+int request_resources(int customer_num, int *request) {
 	pthread_mutex_lock(&avail);
+	printf("\n-------------------------------------\n");
 	printf("%lu, %d, ", time(NULL), customer_num);
 	int i;
 	for(i=0; i < NUMBER_OF_RESOURCES; i++) {
@@ -80,8 +90,8 @@ int request_resources(int customer_num, int request[]) {
 	}
 	
 	/* Check if the resources are available */
-	if (is_greater(request, need[customer_num]) || is_greater(request, available)) {
-		printf("\n %lu, %d, request denied \n", time(NULL), customer_num);
+	if (!isnot_greater(request, need[customer_num]) || !isnot_greater(request, available)) {
+		printf("\n%lu, %d, request denied \n", time(NULL), customer_num);
 		pthread_mutex_unlock(&avail);
 		return -1;
 	}
@@ -94,7 +104,7 @@ int request_resources(int customer_num, int request[]) {
 	}
 
 	if (is_request_safe()) {
-		printf("\n %lu, %d, request satisfied \n", time(NULL), customer_num);
+		printf("\n%lu, %d, request satisfied \n", time(NULL), customer_num);
 		pthread_mutex_unlock(&avail);
 		return 0;
 	} else {
@@ -103,12 +113,15 @@ int request_resources(int customer_num, int request[]) {
 			allocation[customer_num][i] -= request[i];
 			need[customer_num][i] += request[i];
 		}
-		printf("\n %lu, %d, request denied \n", time(NULL), customer_num);
+		printf("\n%lu, %d, request denied \n", time(NULL), customer_num);
 		pthread_mutex_unlock(&avail);
 		return -1;
 	}
 }
 
+/*
+*After the process is done, releases the resources
+*/
 int release_resources(int customer_num) {
 	pthread_mutex_lock(&avail);
 	int i;
@@ -122,16 +135,23 @@ int release_resources(int customer_num) {
 	return 0;
 }
 
-bool needs(int customer_id) {
+/*Checks if a process still needs some resources*/
+int needs(int customer_id) {
 	int i;
+	int c = 0;
 	for (i= 0; i < NUMBER_OF_RESOURCES; i++) {
 		if(need[customer_id][i] != 0) {
-			return false;
+			c++;
 		}
 	}
-	return true;
+	if (c == 0) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
+/*Adds the customers and makes request for resources*/
 void *customer_entry(void *customer_num) {
 	int customer_id = *((int*)customer_num);
 	
@@ -155,10 +175,10 @@ void *customer_entry(void *customer_num) {
 				approve = request_resources(customer_id, request);
 				// If request is denied, go to sleep				
 				if (approve == -1) {
-					usleep(rand()%11);
+					usleep(rand()%10);
 				} // request approved but still has need 
 				else if (approve == 0 && needs(customer_id)) {
-					usleep(rand()%11);
+					usleep(rand()%10);
 				}
 			}
 		}
@@ -174,7 +194,7 @@ int main(int argc, char *argv[]) {
 		printf("Invalid number of arguments\n");
 		return -1;
 	}
-	/* Populate resources into available*/
+	/* Add resources into available*/
 	int i;
 	for (i = 0; i< NUMBER_OF_RESOURCES; i++) {
 		available[i] = atoi(argv[i+1]);
@@ -185,6 +205,7 @@ int main(int argc, char *argv[]) {
 	pthread_t *customer_threads = (pthread_t*)malloc(sizeof(pthread_t)*NUMBER_OF_CUSTOMERS);
 	
 	srand(time(NULL));
+
 	/*Threads of customers*/
 	for (i = 0; i < NUMBER_OF_CUSTOMERS; i++) {
 		int *id = (int*)malloc(sizeof(int));
