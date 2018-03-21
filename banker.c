@@ -3,11 +3,12 @@
 #include <stdbool.h>
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #define NUMBER_OF_CUSTOMERS 5
 #define NUMBER_OF_RESOURCES 3
 
-int max;
+//int max;
 pthread_mutex_t avail;
 /* the available amount for each resource*/
 int available[NUMBER_OF_RESOURCES];
@@ -154,32 +155,36 @@ void *customer_entry(void *customer_num) {
 				approve = request_resources(customer_id, request);
 				// If request is denied, go to sleep				
 				if (approve == -1) {
-					sleep(rand()%1001);
+					usleep(rand()%11);
 				} // request approved but still has need 
 				else if (approve == 0 && needs(customer_id)) {
-					sleep(rand()%1001);
+					usleep(rand()%11);
 				}
 			}
 		}
 
 		free(request);
-		sleep(rand()%1000);
+		usleep(rand()%100);
 		release_resources(customer_id);
 	}
 }
 
-int main(int argc, char **argv) {
-
+int main(int argc, char *argv[]) {
+	if (argc <= NUMBER_OF_RESOURCES) {
+		printf("Invalid number of arguments\n");
+		return -1;
+	}
 	/* Populate resources into available*/
 	int i;
-	for (i = 0; i < NUMBER_OF_RESOURCES; i++) {
+	for (i = 0; i< NUMBER_OF_RESOURCES; i++) {
 		available[i] = atoi(argv[i+1]);
 	} 
-	srand(time(NULL));
 	
+	//printf("**####**");
 	pthread_mutex_init(&avail, NULL);
 	pthread_t *customer_threads = (pthread_t*)malloc(sizeof(pthread_t)*NUMBER_OF_CUSTOMERS);
 	
+	srand(time(NULL));
 	/*Threads of customers*/
 	for (i = 0; i < NUMBER_OF_CUSTOMERS; i++) {
 		int *id = (int*)malloc(sizeof(int));
